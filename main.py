@@ -1205,6 +1205,7 @@ def process_message_async(update: dict):
         # Process audio if present (voice note or audio file)
         transcript_text = None
         audio_error = None
+        user_sent_audio = has_voice or has_audio  # Track if user sent audio for TTS responses
         if has_voice or has_audio:
             try:
                 # Inform user we're transcribing
@@ -1322,7 +1323,30 @@ def process_message_async(update: dict):
                         if message_type == "assistant_message":
                             content = getattr(event, 'content', '')
                             if content and content.strip():
-                                # Add agent name prefix to the message
+                                # If user sent audio, respond with TTS audio first, then text
+                                if user_sent_audio:
+                                    try:
+                                        # Check if OpenAI API key is available for TTS
+                                        if os.environ.get('OPENAI_API_KEY'):
+                                            print(f"Generating TTS audio for response (length: {len(content)} chars)")
+                                            tts_audio_path = generate_tts_audio(content)
+                                            try:
+                                                send_telegram_audio(chat_id, tts_audio_path)
+                                                print("TTS audio sent successfully")
+                                            finally:
+                                                # Clean up temporary TTS file
+                                                try:
+                                                    if os.path.exists(tts_audio_path):
+                                                        os.remove(tts_audio_path)
+                                                except Exception as cleanup_error:
+                                                    print(f"Error cleaning up TTS file: {cleanup_error}")
+                                        else:
+                                            print("OPENAI_API_KEY not available, skipping TTS")
+                                    except Exception as tts_error:
+                                        print(f"Error generating/sending TTS audio: {tts_error}")
+                                        # Continue to send text even if TTS fails
+                                
+                                # Always send text message (with agent name prefix)
                                 prefixed_content = f"(**{agent_name}** says)\n\n{content}"
                                 send_telegram_message(chat_id, prefixed_content)
                                 last_activity = current_time
@@ -4459,6 +4483,85 @@ def transcribe_audio_file(audio_path: str) -> str:
 
     # New SDK returns an object with .text
     return getattr(result, 'text', '') or ''
+
+def generate_tts_audio(text: str) -> str:
+    """
+    Generate TTS audio using OpenAI's TTS API with the Onyx voice.
+    Returns path to the generated audio file (MP3 format).
+    
+    Args:
+        text: The text to convert to speech
+        
+    Returns:
+        str: Path to the generated audio file
+        
+    Raises:
+        Exception: If OPENAI_API_KEY is not configured or TTS generation fails
+    """
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not api_key:
+        raise Exception("OPENAI_API_KEY not configured; cannot generate TTS audio.")
+    
+    from openai import OpenAI
+    import tempfile
+    
+    client = OpenAI(api_key=api_key)
+    
+    try:
+        # Generate TTS using OpenAI API with Onyx voice
+        response = client.audio.speech.create(
+            model="tts-1",
+            voice="onyx",
+            input=text
+        )
+        
+        # Save to temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp:
+            tmp.write(response.content)
+            tmp_path = tmp.name
+        
+        return tmp_path
+        
+    except Exception as e:
+        raise Exception(f"OpenAI TTS error: {str(e)}")
+
+def send_telegram_audio(chat_id: str, audio_path: str, caption: str = None):
+    """
+    Send an audio file to Telegram chat as a voice message.
+    
+    Args:
+        chat_id: The Telegram chat ID
+        audio_path: Path to the audio file to send
+        caption: Optional caption for the audio
+    """
+    try:
+        bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+        if not bot_token:
+            print("Error: Missing Telegram bot token")
+            return
+        
+        import requests
+        
+        url = f"https://api.telegram.org/bot{bot_token}/sendVoice"
+        
+        with open(audio_path, 'rb') as audio_file:
+            files = {'voice': audio_file}
+            data = {'chat_id': chat_id}
+            if caption:
+                data['caption'] = caption
+            
+            response = requests.post(url, data=data, files=files, timeout=30)
+            
+            if response.status_code != 200:
+                error_msg = f"Telegram API error sending audio: {response.status_code} - {response.text}"
+                print(error_msg)
+                raise Exception(error_msg)
+            
+            print(f"Sent audio message to chat {chat_id}")
+            
+    except Exception as e:
+        print(f"Error sending Telegram audio: {str(e)}")
+        raise
 
 def download_telegram_image(file_id: str, bot_token: str) -> tuple[str, str]:
     """

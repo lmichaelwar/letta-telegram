@@ -24,6 +24,7 @@ This bot creates a bridge between Telegram and [Letta](https://letta.com) (forme
 - **Multi-tenant authentication** - Each user brings their own Letta API key
 - Chat with stateful AI agents through Telegram
 - Maintain conversation history and context across sessions
+- **Audio interactions** - Send voice messages with automatic transcription and receive spoken responses using OpenAI TTS (Onyx voice)
 - **Switch between different agents per chat** using the `/agent` command
 - **Persistent agent preferences** that survive deployments
 - **Secure per-user credential storage** with encryption
@@ -72,7 +73,7 @@ modal secret create telegram-bot \
   TELEGRAM_WEBHOOK_SECRET=optional_secret_for_security \
   ENCRYPTION_MASTER_KEY=$ENCRYPTION_MASTER_KEY
 
-# Optional: OpenAI API key for audio transcription support
+# Optional: OpenAI API key for audio transcription and TTS support
 modal secret create openai \
   OPENAI_API_KEY=$OPENAI_API_KEY
 
@@ -101,7 +102,7 @@ modal secret create openai \
 - Generate a secure random string (32+ characters) for this key
 - Keep this key secure - losing it means losing access to stored user credentials
 
-Audio transcription is enabled automatically when `OPENAI_API_KEY` is present via the `openai` secret.
+Audio transcription and TTS responses are enabled automatically when `OPENAI_API_KEY` is present via the `openai` secret.
 
 ### 4. Deploy to Modal
 
@@ -228,14 +229,15 @@ Your bot credentials are stored as a Modal secret:
 **User credentials are stored separately and encrypted per-user in Modal Volumes.**
 
 **`openai` secret (optional):**
-- `OPENAI_API_KEY`: Enables audio transcription of voice and audio messages
+- `OPENAI_API_KEY`: Enables audio transcription of voice and audio messages, and TTS (Text-to-Speech) responses
 - Optional: `OPENAI_TRANSCRIBE_MODEL` to override the default (`gpt-4o-mini-transcribe`)
 
-When the OpenAI key is not provided, the bot will still work but will not transcribe audio messages.
+When the OpenAI key is not provided, the bot will still work but will not transcribe audio messages or generate TTS responses.
 
 ### Audio Messages
 
 - Send voice notes or audio files to the bot, and they will be transcribed and sent to your Letta agent as text.
+- **TTS Responses**: When you send an audio message, the agent's response will be delivered as both audio (using OpenAI TTS with the Onyx voice) and text.
 - Supported formats: `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `wav`, `webm` (Telegram voice notes are `ogg/opus`; these are automatically converted with ffmpeg).
 - File size limit: up to 25 MB for transcription.
 
@@ -281,6 +283,7 @@ This creates temporary endpoints you can use for testing.
 
 - **Real-time Streaming**: Messages stream from Letta agents in real-time
 - **Agent Management**: Switch between different agents per chat with persistent storage
+- **Audio Transcription & TTS**: Voice messages are transcribed and agent responses are spoken using OpenAI TTS (Onyx voice)
 - **Error Handling**: Automatic retries with exponential backoff for 500 errors
 - **Message Formatting**: Automatic conversion to Telegram MarkdownV2 format
 - **Tool Visualization**: Shows when agents use tools like web search
