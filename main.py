@@ -1068,7 +1068,7 @@ def process_message_async(update: dict):
                 # User wants to create default agent
                 try:
                     send_telegram_message(chat_id, "(processing)")
-                    client = get_letta_client(letta_api_key, letta_api_url, timeout=120.0)
+                    client = get_letta_client(letta_api_key, letta_api_url, timeout=180.0)
 
                     # Get current project
                     current_project = get_chat_project(chat_id)
@@ -1156,7 +1156,7 @@ def process_message_async(update: dict):
 
         # Initialize Letta client
         print("Initializing Letta client")
-        client = get_letta_client(letta_api_key, letta_api_url, timeout=30.0)
+        client = get_letta_client(letta_api_key, letta_api_url, timeout=180.0)
         
         # Check if agent name has changed and update cache if needed
         try:
@@ -1553,7 +1553,7 @@ def handle_template_selection(template_name: str, user_id: str, chat_id: str):
         letta_api_url = user_credentials["api_url"]
         
         # Initialize Letta client
-        client = get_letta_client(letta_api_key, letta_api_url, timeout=120.0)
+        client = get_letta_client(letta_api_key, letta_api_url, timeout=180.0)
         
         # Handle Ion as special case with sophisticated memory architecture
         if template_name == "ion":
@@ -4940,7 +4940,7 @@ def process_twilio_message_async(payload: dict):
         content_parts = [{"type": "text", "text": context_message}]
 
         # Initialize client
-        client = get_letta_client(credentials["api_key"], credentials["api_url"], timeout=60.0)
+        client = get_letta_client(credentials["api_key"], credentials["api_url"], timeout=180.0)
 
         # Stream responses and forward assistant messages
         response_stream = client.agents.messages.create_stream(
