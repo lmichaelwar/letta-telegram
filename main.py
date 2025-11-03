@@ -1205,7 +1205,8 @@ def process_message_async(update: dict):
         # Process audio if present (voice note or audio file)
         transcript_text = None
         audio_error = None
-        user_sent_audio = has_voice or has_audio  # Track if user sent audio for TTS responses
+        # Track if THIS message was audio (for conditional TTS response)
+        current_message_is_audio = has_voice or has_audio
         if has_voice or has_audio:
             try:
                 # Inform user we're transcribing
@@ -1323,8 +1324,9 @@ def process_message_async(update: dict):
                         if message_type == "assistant_message":
                             content = getattr(event, 'content', '')
                             if content and content.strip():
-                                # If user sent audio, respond with TTS audio first, then text
-                                if user_sent_audio:
+                                # If THIS message was audio, respond with TTS audio first, then text
+                                # Only generate TTS if the current incoming message was voice/audio
+                                if current_message_is_audio:
                                     try:
                                         # Check if OpenAI API key is available for TTS
                                         if os.environ.get('OPENAI_API_KEY'):
