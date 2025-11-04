@@ -1424,6 +1424,46 @@ def process_message_async(update: dict):
                                         tool_msg = f"(**{agent_name}** ran code)"
                                         tool_msg += f"\n```{language}\n{code}\n```"
 
+                                    elif tool_name == "send_message":
+                                        # Handle send_message tool - extract message and send with TTS if audio input
+                                        message_content = args_obj.get('message', '')
+                                        if message_content and message_content.strip():
+                                            # If the incoming message was audio, respond with TTS audio
+                                            if current_message_is_audio:
+                                                try:
+                                                    # Check if OpenAI API key is available for TTS
+                                                    if os.environ.get('OPENAI_API_KEY'):
+                                                        print(f"Generating TTS audio for send_message tool (length: {len(message_content)} chars)")
+                                                        tts_audio_path = generate_tts_audio(message_content)
+                                                        try:
+                                                            send_telegram_audio(chat_id, tts_audio_path)
+                                                            print("TTS audio sent successfully for send_message tool")
+                                                        finally:
+                                                            # Clean up temporary TTS file
+                                                            try:
+                                                                if os.path.exists(tts_audio_path):
+                                                                    os.remove(tts_audio_path)
+                                                            except Exception as cleanup_error:
+                                                                print(f"Error cleaning up TTS file: {cleanup_error}")
+                                                    else:
+                                                        print("OPENAI_API_KEY not available, skipping TTS for send_message")
+                                                except Exception as tts_error:
+                                                    print(f"Error generating/sending TTS audio for send_message: {tts_error}")
+                                                    # Continue to send text even if TTS fails
+                                            
+                                            # Always send text message (with agent name prefix)
+                                            prefixed_content = f"(**{agent_name}** says)\n\n{message_content}"
+                                            tool_msg = prefixed_content
+                                        else:
+                                            # Fallback if no message content
+                                            tool_msg = f"(**{agent_name}** using tool: {tool_name})"
+                                    
+                                    elif tool_name == "notify_via_telegram":
+                                        # Skip verbose display for notify_via_telegram since message is handled elsewhere
+                                        # Just show a minimal notification
+                                        tool_msg = None  # Will skip sending message below
+                                        print(f"Agent used notify_via_telegram tool (message handled separately)")
+
                                     else:
                                         tool_msg = f"(**{agent_name}** using tool: {tool_name})"
                                         formatted_args = json.dumps(args_obj, indent=2)
@@ -1433,8 +1473,10 @@ def process_message_async(update: dict):
                                     print(f"Error parsing tool arguments: {e}")
                                     tool_msg = f"(**{agent_name}** using tool: {tool_name})\n```\n{arguments}\n```"
 
-                                send_telegram_message(chat_id, tool_msg)
-                                last_activity = current_time
+                                # Only send message if tool_msg is not None
+                                if tool_msg is not None:
+                                    send_telegram_message(chat_id, tool_msg)
+                                    last_activity = current_time
 
                 except Exception as e:
                     print(f"⚠️  Error processing stream event: {e}")
