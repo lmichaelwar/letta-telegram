@@ -259,14 +259,14 @@ def delete_user_credentials(user_id: str) -> bool:
         # Re-raise the exception so it gets tracked by infrastructure
         raise
 
-def get_letta_client(api_key: str, api_url: str, timeout: float = 30.0):
+def get_letta_client(api_key: str, api_url: str, timeout: float = 600.0):
     """
     Create Letta client with consistent timeout configuration
     
     Args:
         api_key: Letta API key
         api_url: Letta API base URL  
-        timeout: Timeout in seconds (default 30s)
+        timeout: Timeout in seconds (default 600s / 10 minutes)
         
     Returns:
         Letta client instance configured with timeout
@@ -690,7 +690,7 @@ First contact: Telegram
             project_id=project_id,
             enable_sleeptime=True,
             request_options={
-                'timeout_in_seconds': 120,  # 2 minutes for default agent creation
+                'timeout_in_seconds': 600,  # 10 minutes for default agent creation
                 'max_retries': 1
             }
         )
@@ -948,7 +948,7 @@ Examples:
             project_id=project_id,
             enable_sleeptime=True,
             request_options={
-                'timeout_in_seconds': 180,  # 3 minutes for complex agent creation
+                'timeout_in_seconds': 600,  # 10 minutes for complex agent creation
                 'max_retries': 1
             }
         )
@@ -1095,7 +1095,7 @@ def process_message_async(update: dict):
                 # User wants to create default agent
                 try:
                     send_telegram_message(chat_id, "(processing)")
-                    client = get_letta_client(letta_api_key, letta_api_url, timeout=180.0)
+                    client = get_letta_client(letta_api_key, letta_api_url, timeout=600.0)
 
                     # Get current project
                     current_project = get_chat_project(chat_id)
@@ -1143,7 +1143,7 @@ def process_message_async(update: dict):
                                 }
                             ],
                             include_pings=True,
-                            request_options={'timeout_in_seconds': 180}
+                            request_options={'timeout_in_seconds': 600}
                         )
 
                         # Stream the introduction
@@ -1183,7 +1183,7 @@ def process_message_async(update: dict):
 
         # Initialize Letta client
         print("Initializing Letta client")
-        client = get_letta_client(letta_api_key, letta_api_url, timeout=180.0)
+        client = get_letta_client(letta_api_key, letta_api_url, timeout=600.0)
         
         # Check if agent name has changed and update cache if needed
         try:
@@ -1335,14 +1335,14 @@ def process_message_async(update: dict):
                 ],
                 include_pings=True,
                 request_options={
-                    'timeout_in_seconds': 180,
+                    'timeout_in_seconds': 600,
                 }
             )
 
             # Process streaming response with timeout
             start_time = time.time()
             last_activity = time.time()
-            timeout_seconds = 120  # 2 minute timeout
+            timeout_seconds = 600  # 10 minute timeout
 
             for event in response_stream:
                 current_time = time.time()
@@ -1597,7 +1597,7 @@ def handle_template_selection(template_name: str, user_id: str, chat_id: str):
         letta_api_url = user_credentials["api_url"]
         
         # Initialize Letta client
-        client = get_letta_client(letta_api_key, letta_api_url, timeout=180.0)
+        client = get_letta_client(letta_api_key, letta_api_url, timeout=600.0)
         
         # Handle Ion as special case with sophisticated memory architecture
         if template_name == "ion":
@@ -1638,7 +1638,7 @@ def handle_template_selection(template_name: str, user_id: str, chat_id: str):
                         }
                     ],
                     include_pings=True,
-                    request_options={'timeout_in_seconds': 180}
+                    request_options={'timeout_in_seconds': 600}
                 )
                 
                 # Stream Ion's introduction
@@ -2500,7 +2500,7 @@ def handle_make_default_agent_command(update: dict, chat_id: str):
                     }
                 ],
                 include_pings=True,
-                request_options={'timeout_in_seconds': 180}
+                request_options={'timeout_in_seconds': 600}
             )
 
             # Process streaming response
@@ -5014,14 +5014,14 @@ def process_twilio_message_async(payload: dict):
         content_parts = [{"type": "text", "text": context_message}]
 
         # Initialize client
-        client = get_letta_client(credentials["api_key"], credentials["api_url"], timeout=180.0)
+        client = get_letta_client(credentials["api_key"], credentials["api_url"], timeout=600.0)
 
         # Stream responses and forward assistant messages
         response_stream = client.agents.messages.create_stream(
             agent_id=agent_id,
             messages=[{"role": "user", "content": content_parts}],
             include_pings=True,
-            request_options={'timeout_in_seconds': 180}
+            request_options={'timeout_in_seconds': 600}
         )
 
         print(f"[Twilio][{corr_id}] Streaming started for agent_id={agent_id}")
